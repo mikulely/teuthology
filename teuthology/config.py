@@ -154,6 +154,8 @@ class TeuthologyConfig(YamlConfig):
         'kojiroot_url': 'http://kojipkgs.fedoraproject.org/packages',
         'koji_task_url': 'https://kojipkgs.fedoraproject.org/work/',
         'baseurl_template': 'http://{host}/{proj}-{pkg_type}-{dist}-{arch}-{flavor}/{uri}',
+        'shaman_host': 'shaman.ceph.com',
+        'shaman_baseurl_template': 'http://{host}/{proj}-{pkg_type}-{dist}-{arch}-{flavor}/{uri}',
         'teuthology_path': None,
         'suite_verify_ceph_hash': True,
         'suite_allow_missing_packages': False,
