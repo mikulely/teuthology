@@ -810,3 +810,11 @@ class ShamanProject(GitbuilderProject):
         if not self._result.ok or len(self._result.json()) == 0:
             raise VersionNotFoundError(self._result.url)
         return self._result.json()[0]['extra']['package_manager_version']
+
+
+def get_builder_project():
+    if config.use_shaman is True:
+        builder_class = ShamanProject
+    else:
+        builder_class = GitbuilderProject
+    return builder_class
