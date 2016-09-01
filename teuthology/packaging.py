@@ -777,7 +777,7 @@ class ShamanProject(GitbuilderProject):
             flavor=flavor,
             status='ready',
         )
-        if self.branch:
+        if getattr(self, 'branch', None):
             req_obj['ref'] = self.branch
         if self.sha1:
             req_obj['sha1'] = self.sha1
