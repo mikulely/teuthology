@@ -513,3 +513,30 @@ class TestGitbuilderProject(object):
         ctx = dict(foo="bar")
         gp = self.klass("ceph", {}, ctx=ctx, remote=rem)
         assert gp.dist_release == expected
+
+
+class TestShamanProject(TestGitbuilderProject):
+    klass = packaging.ShamanProject
+
+    DISTRO_MATRIX = [
+        ('rhel', '7.0', None, 'centos/7'),
+        ('centos', '6.5', None, 'centos/6'),
+        ('centos', '7.0', None, 'centos/7'),
+        ('centos', '7.1', None, 'centos/7'),
+        ('fedora', '20', None, 'fedora/20'),
+        ('ubuntu', '14.04', 'trusty', 'ubuntu/14.04'),
+        ('ubuntu', '14.04', None, 'ubuntu/14.04'),
+        ('debian', '7.0', None, 'debian/7.0'),
+        ('debian', '7', None, 'debian/7'),
+        ('debian', '7.1', None, 'debian/7.1'),
+        ('ubuntu', '12.04', None, 'ubuntu/12.04'),
+        ('ubuntu', '14.04', None, 'ubuntu/14.04'),
+    ]
+
+    DISTRO_MATRIX_NOVER = [
+        ('rhel', None, None, 'centos/7'),
+        ('centos', None, None, 'centos/7'),
+        ('fedora', None, None, 'fedora/20'),
+        ('ubuntu', None, None, 'ubuntu/14.04'),
+        ('debian', None, None, 'debian/7.0'),
+    ]
