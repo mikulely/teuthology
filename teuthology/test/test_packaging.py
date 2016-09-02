@@ -302,26 +302,12 @@ class TestPackaging(object):
         assert m_get.call_count == 1
 
 
-class TestGitbuilderProject(object):
-    klass = packaging.GitbuilderProject
+class TestBuilderProject(object):
+    klass = None
 
     def setup(self):
-        self.p_config = patch('teuthology.packaging.config')
-        self.m_config = self.p_config.start()
-        self.m_config.baseurl_template = \
-            'http://{host}/{proj}-{pkg_type}-{dist}-{arch}-{flavor}/{uri}'
-        self.m_config.gitbuilder_host = "gitbuilder.ceph.com"
-        self.p_get_config_value = \
-            patch('teuthology.packaging._get_config_value_for_remote')
-        self.m_get_config_value = self.p_get_config_value.start()
-        self.m_get_config_value.return_value = None
-        self.p_get = patch('requests.get')
-        self.m_get = self.p_get.start()
-
-    def teardown(self):
-        self.p_config.stop()
-        self.p_get_config_value.stop()
-        self.p_get.stop()
+        if self.klass is None:
+            pytest.skip()
 
     def _get_remote(self, arch="x86_64", system_type="deb", distro="ubuntu",
                     codename="trusty", version="14.04"):
@@ -334,24 +320,25 @@ class TestGitbuilderProject(object):
 
         return rem
 
-    def test_init_from_remote_base_url(self):
+    def test_init_from_remote_base_url(self, expected=None):
+        assert expected is not None
         rem = self._get_remote()
         ctx = dict(foo="bar")
         gp = self.klass("ceph", {}, ctx=ctx, remote=rem)
         result = gp.base_url
-        expected = "http://gitbuilder.ceph.com/ceph-deb-trusty-x86_64-basic/ref/master"
         assert result == expected
 
-    def test_init_from_remote_base_url_debian(self):
+    def test_init_from_remote_base_url_debian(self, expected=None):
+        assert expected is not None
         # remote.os.codename returns and empty string on debian
         rem = self._get_remote(distro="debian", codename='', version="7.1")
         ctx = dict(foo="bar")
         gp = self.klass("ceph", {}, ctx=ctx, remote=rem)
         result = gp.base_url
-        expected = "http://gitbuilder.ceph.com/ceph-deb-wheezy-x86_64-basic/ref/master"
         assert result == expected
 
-    def test_init_from_config_base_url(self):
+    def test_init_from_config_base_url(self, expected=None):
+        assert expected is not None
         config = dict(
             os_type="ubuntu",
             os_version="14.04",
@@ -359,7 +346,7 @@ class TestGitbuilderProject(object):
         )
         gp = self.klass("ceph", config)
         result = gp.base_url
-        expected = "http://gitbuilder.ceph.com/ceph-deb-trusty-x86_64-basic/sha1/sha1"
+        print self.m_get.call_args_list
         assert result == expected
 
     def test_init_from_config_branch_ref(self):
@@ -398,12 +385,7 @@ class TestGitbuilderProject(object):
         expected_log = 'More than one of ref, tag, branch, or sha1 supplied; using tag'
         assert expected_log in caplog.text()
 
-    @patch("teuthology.packaging._get_response")
-    def test_get_package_version_found(self, m_get_response):
-        resp = Mock()
-        resp.ok = True
-        resp.text = "0.90.0"
-        m_get_response.return_value = resp
+    def test_get_package_version_found(self):
         rem = self._get_remote()
         ctx = dict(foo="bar")
         gp = self.klass("ceph", {}, ctx=ctx, remote=rem)
@@ -420,41 +402,19 @@ class TestGitbuilderProject(object):
         with pytest.raises(VersionNotFoundError):
             gp.version
 
-    @patch("requests.get")
-    def test_get_package_sha1_fetched_found(self, m_get):
-        resp = Mock()
-        resp.ok = True
-        resp.text = "the_sha1"
-        m_get.return_value = resp
+    def test_get_package_sha1_fetched_found(self):
         rem = self._get_remote()
         ctx = dict(foo="bar")
         gp = self.klass("ceph", {}, ctx=ctx, remote=rem)
         assert gp.sha1 == "the_sha1"
 
-    @patch("requests.get")
-    def test_get_package_sha1_fetched_not_found(self, m_get):
-        resp = Mock()
-        resp.ok = False
-        m_get.return_value = resp
+    def test_get_package_sha1_fetched_not_found(self):
         rem = self._get_remote()
         ctx = dict(foo="bar")
         gp = self.klass("ceph", {}, ctx=ctx, remote=rem)
         assert not gp.sha1
 
-    DISTRO_MATRIX = [
-        ('rhel', '7.0', None, 'centos7'),
-        ('centos', '6.5', None, 'centos6'),
-        ('centos', '7.0', None, 'centos7'),
-        ('centos', '7.1', None, 'centos7'),
-        ('fedora', '20', None, 'fedora20'),
-        ('ubuntu', '14.04', 'trusty', 'trusty'),
-        ('ubuntu', '14.04', None, 'trusty'),
-        ('debian', '7.0', None, 'wheezy'),
-        ('debian', '7', None, 'wheezy'),
-        ('debian', '7.1', None, 'wheezy'),
-        ('ubuntu', '12.04', None, 'precise'),
-        ('ubuntu', '14.04', None, 'trusty'),
-    ]
+    DISTRO_MATRIX = [None] * 12
 
     @pytest.mark.parametrize(
         "matrix_index",
@@ -518,8 +478,182 @@ class TestGitbuilderProject(object):
         assert gp.dist_release == expected
 
 
-class TestShamanProject(TestGitbuilderProject):
+class TestGitbuilderProject(TestBuilderProject):
+    klass = packaging.GitbuilderProject
+
+    def setup(self):
+        self.p_config = patch('teuthology.packaging.config')
+        self.m_config = self.p_config.start()
+        self.m_config.baseurl_template = \
+            'http://{host}/{proj}-{pkg_type}-{dist}-{arch}-{flavor}/{uri}'
+        self.m_config.gitbuilder_host = "gitbuilder.ceph.com"
+        self.p_get_config_value = \
+            patch('teuthology.packaging._get_config_value_for_remote')
+        self.m_get_config_value = self.p_get_config_value.start()
+        self.m_get_config_value.return_value = None
+        self.p_get = patch('requests.get')
+        self.m_get = self.p_get.start()
+        self.p_get_response = patch("teuthology.packaging._get_response")
+        self.m_get_response = self.p_get_response.start()
+
+    def teardown(self):
+        self.p_config.stop()
+        self.p_get_config_value.stop()
+        self.p_get.stop()
+        self.p_get_response.stop()
+
+    def test_init_from_remote_base_url(self, expected=None):
+        super(TestGitbuilderProject, self)\
+            .test_init_from_remote_base_url(
+                "http://gitbuilder.ceph.com/"
+                "ceph-deb-trusty-x86_64-basic/ref/master"
+            )
+
+    def test_init_from_remote_base_url_debian(self):
+        super(TestGitbuilderProject, self)\
+            .test_init_from_remote_base_url_debian(
+                "http://gitbuilder.ceph.com/"
+                "ceph-deb-wheezy-x86_64-basic/ref/master"
+        )
+
+    def test_init_from_config_base_url(self):
+        super(TestGitbuilderProject, self).test_init_from_config_base_url(
+            "http://gitbuilder.ceph.com/ceph-deb-trusty-x86_64-basic/sha1/sha1"
+        )
+
+    def test_get_package_version_found(self):
+        resp = Mock()
+        resp.ok = True
+        resp.text = "0.90.0"
+        self.m_get_response.return_value = resp
+        super(TestGitbuilderProject, self)\
+            .test_get_package_version_found()
+
+    def test_get_package_sha1_fetched_found(self):
+        resp = Mock()
+        resp.ok = True
+        resp.text = "the_sha1"
+        self.m_get.return_value = resp
+        super(TestGitbuilderProject, self)\
+            .test_get_package_sha1_fetched_found()
+
+    def test_get_package_sha1_fetched_not_found(self):
+        resp = Mock()
+        resp.ok = False
+        self.m_get.return_value = resp
+        super(TestGitbuilderProject, self)\
+            .test_get_package_sha1_fetched_not_found()
+
+    DISTRO_MATRIX = [
+        ('rhel', '7.0', None, 'centos7'),
+        ('centos', '6.5', None, 'centos6'),
+        ('centos', '7.0', None, 'centos7'),
+        ('centos', '7.1', None, 'centos7'),
+        ('fedora', '20', None, 'fedora20'),
+        ('ubuntu', '14.04', 'trusty', 'trusty'),
+        ('ubuntu', '14.04', None, 'trusty'),
+        ('debian', '7.0', None, 'wheezy'),
+        ('debian', '7', None, 'wheezy'),
+        ('debian', '7.1', None, 'wheezy'),
+        ('ubuntu', '12.04', None, 'precise'),
+        ('ubuntu', '14.04', None, 'trusty'),
+    ]
+
+
+class TestShamanProject(TestBuilderProject):
     klass = packaging.ShamanProject
+
+    def setup(self):
+        self.p_config = patch('teuthology.packaging.config')
+        self.m_config = self.p_config.start()
+        self.m_config.baseurl_template = \
+            'http://{host}/{proj}-{pkg_type}-{dist}-{arch}-{flavor}/{uri}'
+        self.m_config.gitbuilder_host = "gitbuilder.ceph.com"
+        self.p_get_config_value = \
+            patch('teuthology.packaging._get_config_value_for_remote')
+        self.m_get_config_value = self.p_get_config_value.start()
+        self.m_get_config_value.return_value = None
+        self.p_get = patch('requests.get')
+        self.m_get = self.p_get.start()
+
+    def teardown(self):
+        self.p_config.stop()
+        self.p_get_config_value.stop()
+        self.p_get.stop()
+
+    def test_init_from_remote_base_url(self):
+        def m_get_base_url(obj):
+            obj._search()
+            return self.m_get.call_args_list[0][0][0]
+        with patch(
+            'teuthology.packaging.ShamanProject._get_base_url',
+            new=m_get_base_url,
+        ):
+            super(TestShamanProject, self)\
+                .test_init_from_remote_base_url(
+                    "https://shaman.ceph.com/api/search?status=ready"
+                    "&project=ceph&flavor=default"
+                    "&distros=ubuntu%2F14.04%2Fx86_64"
+                )
+
+    def test_init_from_remote_base_url_debian(self):
+        def m_get_base_url(obj):
+            obj._search()
+            return self.m_get.call_args_list[0][0][0]
+        with patch(
+            'teuthology.packaging.ShamanProject._get_base_url',
+            new=m_get_base_url,
+        ):
+            super(TestShamanProject, self)\
+                .test_init_from_remote_base_url_debian(
+                    "https://shaman.ceph.com/api/search?status=ready"
+                    "&project=ceph&flavor=default"
+                    "&distros=debian%2F7.1%2Fx86_64"
+                )
+
+    def test_init_from_config_base_url(self):
+        # Here, we really just need to make sure ShamanProject._search()
+        # queries the right URL. So let's make _get_base_url() just pass that
+        # URL through and test that value.
+        def m_get_base_url(obj):
+            obj._search()
+            return self.m_get.call_args_list[0][0][0]
+        with patch(
+            'teuthology.packaging.ShamanProject._get_base_url',
+            new=m_get_base_url,
+        ):
+            super(TestShamanProject, self).test_init_from_config_base_url(
+                "https://shaman.ceph.com/api/search?status=ready&project=ceph" \
+                "&flavor=default&sha1=sha1&distros=ubuntu%2F14.04%2Fx86_64"
+            )
+
+    def test_get_package_version_found(self):
+        resp = Mock()
+        resp.ok = True
+        resp.json.return_value = [
+            dict(
+                sha1='the_sha1',
+                extra=dict(package_manager_version='0.90.0'),
+            )
+        ]
+        self.m_get.return_value = resp
+        super(TestShamanProject, self)\
+            .test_get_package_version_found()
+
+    def test_get_package_sha1_fetched_found(self):
+        resp = Mock()
+        resp.ok = True
+        resp.json.return_value = [dict(sha1='the_sha1')]
+        self.m_get.return_value = resp
+        super(TestShamanProject, self)\
+            .test_get_package_sha1_fetched_found()
+
+    def test_get_package_sha1_fetched_not_found(self):
+        resp = Mock()
+        resp.json.return_value = []
+        self.m_get.return_value = resp
+        super(TestShamanProject, self)\
+            .test_get_package_sha1_fetched_not_found()
 
     DISTRO_MATRIX = [
         ('rhel', '7.0', None, 'centos/7'),
