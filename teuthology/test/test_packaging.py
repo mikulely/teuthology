@@ -315,10 +315,13 @@ class TestGitbuilderProject(object):
             patch('teuthology.packaging._get_config_value_for_remote')
         self.m_get_config_value = self.p_get_config_value.start()
         self.m_get_config_value.return_value = None
+        self.p_get = patch('requests.get')
+        self.m_get = self.p_get.start()
 
     def teardown(self):
         self.p_config.stop()
         self.p_get_config_value.stop()
+        self.p_get.stop()
 
     def _get_remote(self, arch="x86_64", system_type="deb", distro="ubuntu",
                     codename="trusty", version="14.04"):
