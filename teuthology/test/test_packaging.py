@@ -582,6 +582,9 @@ class TestShamanProject(TestBuilderProject):
         self.p_get.stop()
 
     def test_init_from_remote_base_url(self):
+        # Here, we really just need to make sure ShamanProject._search()
+        # queries the right URL. So let's make _get_base_url() just pass that
+        # URL through and test that value.
         def m_get_base_url(obj):
             obj._search()
             return self.m_get.call_args_list[0][0][0]
@@ -597,6 +600,9 @@ class TestShamanProject(TestBuilderProject):
                 )
 
     def test_init_from_remote_base_url_debian(self):
+        # Here, we really just need to make sure ShamanProject._search()
+        # queries the right URL. So let's make _get_base_url() just pass that
+        # URL through and test that value.
         def m_get_base_url(obj):
             obj._search()
             return self.m_get.call_args_list[0][0][0]
